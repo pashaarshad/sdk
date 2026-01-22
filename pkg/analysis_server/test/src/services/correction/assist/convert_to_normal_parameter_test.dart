@@ -69,4 +69,36 @@ class A {
 }
 ''');
   }
+
+  Future<void> test_privateNamed() async {
+    await resolveTestCode('''
+class A {
+  int _test;
+  A({required this._te^st});
+}
+''');
+    await assertHasAssist('''
+class A {
+  int _test;
+  A({required int test}) : _test = test;
+}
+''');
+  }
+
+  Future<void> test_privateNamed_withExistingInitializer() async {
+    await resolveTestCode('''
+class A {
+  double aaa;
+  int _bbb;
+  A({required this._bb^b}) : aaa = 1.0;
+}
+''');
+    await assertHasAssist('''
+class A {
+  double aaa;
+  int _bbb;
+  A({required int bbb}) : aaa = 1.0, _bbb = bbb;
+}
+''');
+  }
 }

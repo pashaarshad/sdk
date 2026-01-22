@@ -2,6 +2,7 @@
 // for details. All rights reserved. Use of this source code is governed by a
 // BSD-style license that can be found in the LICENSE file.
 
+import 'package:_fe_analyzer_shared/src/scanner/token_impl.dart';
 import 'package:analysis_server/src/services/correction/assist.dart';
 import 'package:analysis_server_plugin/edit/dart/correction_producer.dart';
 import 'package:analyzer/dart/ast/ast.dart';
@@ -33,26 +34,39 @@ class ConvertToNormalParameter extends ResolvedCorrectionProducer {
     if (constructor is! ConstructorDeclaration) return;
 
     var parameterElement = parameter.declaredFragment!.element;
-    var name = parameter.name.lexeme;
     var type = parameterElement.type;
 
     await builder.addDartFileEdit(file, (builder) {
-      // replace parameter
+      var parameterName = parameter.name.lexeme;
+      var fieldName = parameterName;
+
+      if (parameter.isNamed) {
+        if (correspondingPublicName(parameterName) case var publicName?) {
+          parameterName = publicName;
+        }
+      }
+
       if (type is DynamicType) {
-        builder.addSimpleReplacement(range.node(parameter), name);
+        builder.addSimpleReplacement(range.node(parameter), parameterName);
       } else {
         builder.addReplacement(range.node(parameter), (builder) {
           builder.writeType(type);
           builder.write(' ');
-          builder.write(name);
+          builder.write(parameterName);
         });
       }
-      // add field initializer
+
       List<ConstructorInitializer> initializers = constructor.initializers;
       if (initializers.isEmpty) {
-        builder.addSimpleInsertion(parameterList.end, ' : $name = $name');
+        builder.addSimpleInsertion(
+          parameterList.end,
+          ' : $fieldName = $parameterName',
+        );
       } else {
-        builder.addSimpleInsertion(initializers.last.end, ', $name = $name');
+        builder.addSimpleInsertion(
+          initializers.last.end,
+          ', $fieldName = $parameterName',
+        );
       }
     });
   }
